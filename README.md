@@ -79,11 +79,5 @@ Logs are color-coded for better clarity:
 - This script is intended for ethical and authorized use only.
 - Always ensure you have permission to test the environment.
 
-## License
-This project is licensed under the MIT License. See the `LICENSE` file for details.
-
 ---
-
-**Author**: [Your Name]  
-**Version**: 1.0.0
 
