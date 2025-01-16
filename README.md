@@ -62,7 +62,7 @@ The script performs the following steps:
 1. **Make the template vulnerable:** Updates the template to allow exploitation.
 2. **Request a certificate:** Requests a certificate from the CA server. If it fails, retries with debug mode.
 3. **Authenticate using the certificate:** Authenticates using the generated PFX file.
->[!note] small but important note
+> small but important note
 > At the last step it will seem like the script is hanging. This is because certipy wants input from the user. Just wait 10 seconds and it will auto continue and give you the hash of the wanted user. 
 
 Logs are color-coded for better clarity:
